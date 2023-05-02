@@ -56,6 +56,7 @@ class ManifestExecuteSerializer(ValidateMixin, serializers.Serializer):
             ("PUT", "PUT"),
         ]
     )
+    precondition=serializers.JSONField(required=False, default=list[dict])
 
 
 class ManifestPostExecuteNotificationSerializer(ValidateMixin, serializers.Serializer):
