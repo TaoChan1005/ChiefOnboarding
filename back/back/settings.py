@@ -39,10 +39,7 @@ else:
         env("ALLOWED_HOST", default="0.0.0.0"),
     ]
 
-if env("CSRF_TRUSTED_ORIGINS", default="") != "":
-    CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS").split(",")
-else:
-    CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
@@ -454,10 +451,9 @@ LDAP_USER_HOME_DIRECTORY=env("LDAP_USER_HOME_DIRECTORY", default="/home")
 # USER_CREDENTIALS
 USER_CREDENTIALS_SEND_IMMEADIATELY= env.bool("USER_CREDENTIALS_SEND_IMMEADIATELY", default=False)
 
-if env.str("WELCOME_URL", "") == "":
-    WELCOME_URL = BASE_URL
-else:
-    WELCOME_URL = env("WELCOME_URL")
+
+# Welcome page
+WELCOME_URL = env.str("WELCOME_URL",default=BASE_URL)
 
 PREBOARDING_URL = None
 if env.str("PREBOARDING_URL","")=="":    
