@@ -1,4 +1,5 @@
 import pytest
+from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
 from freezegun.api import freeze_time
@@ -94,7 +95,6 @@ def test_employees_endpoint(setup_rest, new_hire_factory):
 
 @pytest.mark.django_db
 def test_sequences_endpoint(setup_rest, sequence_factory):
-
     client = setup_rest
 
     seq1 = sequence_factory()
@@ -109,7 +109,6 @@ def test_sequences_endpoint(setup_rest, sequence_factory):
 
 @pytest.mark.django_db
 def test_create_new_hire_endpoint(setup_rest, sequence_factory):
-
     client = setup_rest
 
     seq1 = sequence_factory()
@@ -128,12 +127,11 @@ def test_create_new_hire_endpoint(setup_rest, sequence_factory):
     assert response.status_code == 201
     # We already have the user with the token + this new hire
     assert User.objects.count() == 2
-    assert User.objects.filter(role=0).count() == 1
+    assert User.objects.filter(role=get_user_model().Role.NEWHIRE).count() == 1
 
 
 @pytest.mark.django_db
 def test_create_new_hire_with_invalid_options(setup_rest, sequence_factory):
-
     client = setup_rest
 
     seq1 = sequence_factory()
@@ -212,7 +210,6 @@ def test_create_new_hire_with_invalid_options(setup_rest, sequence_factory):
 @pytest.mark.django_db
 @freeze_time("2022-05-13 08:00:00")
 def test_create_new_hire_with_buddy_and_manager(setup_rest, admin_factory, mailoutbox):
-
     client = setup_rest
 
     admin1 = admin_factory()
@@ -246,7 +243,6 @@ def test_create_new_hire_with_buddy_and_manager(setup_rest, admin_factory, mailo
 
 @pytest.mark.django_db
 def test_create_admin_user(setup_rest, mailoutbox):
-
     client = setup_rest
 
     # No emails

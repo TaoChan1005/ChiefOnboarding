@@ -42,6 +42,19 @@ else:
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
 
+
+if env.str("BASE_URL", "") == "":
+    BASE_URL = "https://" + ALLOWED_HOSTS[0]
+else:
+    BASE_URL = env("BASE_URL")
+
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=[
+        BASE_URL,
+    ],
+)
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -99,7 +112,6 @@ SLACK_APP_TOKEN = env("SLACK_APP_TOKEN", default="")
 SLACK_BOT_TOKEN = env("SLACK_BOT_TOKEN", default="")
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -184,8 +196,6 @@ TIME_ZONE = "UTC"
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -196,13 +206,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
-
 AUTH_USER_MODEL = "users.User"
-
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    origin for origin in env.list("CORS_ALLOWED_ORIGINS", default="")
-]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -299,12 +303,9 @@ AWS_S3_ENDPOINT_URL = env(
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+# fallback for old environment variable, AWS_DEFAULT_REGION should be prefered
 AWS_REGION = env("AWS_REGION", default="eu-west-1")
-
-if env.str("BASE_URL", "") == "":
-    BASE_URL = "https://" + ALLOWED_HOSTS[0]
-else:
-    BASE_URL = env("BASE_URL")
+AWS_DEFAULT_REGION = env("AWS_DEFAULT_REGION", default=AWS_REGION)
 
 # Twilio
 TWILIO_FROM_NUMBER = env("TWILIO_FROM_NUMBER", default="")
@@ -323,7 +324,7 @@ AXES_FAILURE_LIMIT = env.int("AXES_FAILURE_LIMIT", default=10)
 AXES_COOLOFF_TIME = env.int("AXES_COOLOFF_TIME", default=24)
 
 if env.bool("AXES_USE_FORWARDED_FOR", True):
-    AXES_META_PRECEDENCE_ORDER = [
+    AXES_IPWARE_META_PRECEDENCE_ORDER = [
         "HTTP_X_FORWARDED_FOR",
         "REMOTE_ADDR",
     ]
@@ -364,7 +365,9 @@ if env.bool("SSL_REDIRECT", default=False):
     SECURE_SSL_REDIRECT = True
 
 # Storing static files compressed
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+STORAGES = {
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 # Languages
 LANGUAGES = [
@@ -408,23 +411,22 @@ if env.bool("DEBUG_LOGGING", default=False):
 
 # OIDC
 OIDC_LOGIN_DISPLAY = env("OIDC_LOGIN_DISPLAY", default="Custom-OIDC")
-OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", default="")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", default="")
 OIDC_AUTHORIZATION_URL = env("OIDC_AUTHORIZATION_URL", default="")
 OIDC_TOKEN_URL = env("OIDC_TOKEN_URL", default="")
 OIDC_USERINFO_URL = env("OIDC_USERINFO_URL", default="")
-OIDC_SCOPES = env("OIDC_SCOPES", default="openid email profile")
+OIDC_SCOPES = env("OIDC_SCOPES", default="openid email name profile")
 OIDC_LOGOUT_URL = env("OIDC_LOGOUT_URL", default="")
 OIDC_FORCE_AUTHN = env.bool("OIDC_FORCE_AUTHN", default=False)
-OIDC_ROLE_ADMIN_PATTEREN = env(
-    "OIDC_ROLE_ADMIN_PATTEREN", default="^cn=Administrators.*"
-)
-OIDC_ROLE_MANAGE_PATTEREN = env("OIDC_ROLE_MANAGE_PATTEREN", default="^cn=Manage.*")
+OIDC_ROLE_ADMIN_PATTERN = env("OIDC_ROLE_ADMIN_PATTERN", default="^cn=Administrators.*")
+OIDC_ROLE_MANAGER_PATTERN = env("OIDC_ROLE_MANAGER_PATTERN", default="^cn=Managers.*")
+OIDC_ROLE_NEW_HIRE_PATTERN = env("OIDC_ROLE_NEW_HIRE_PATTERN", default="^cn=Newhires.*")
 OIDC_ROLE_DEFAULT = env.int("OIDC_DEFAULT_ROLE", "3")
-OIDC_ROLE_PATH_IN_RETURN = env('OIDC_ROLE_PATH_IN_RETURN',default="zoneinfo").split(",")
+OIDC_ROLE_UPDATING = env.bool("OIDC_ROLE_UPDATING", True)
+OIDC_ROLE_PATH_IN_RETURN = env("OIDC_ROLE_PATH_IN_RETURN", default="zoneinfo").split(".")
 OIDC_USERINFO_SYNC = env.bool("OIDC_USERINFO_SYNC", default=False)
-
+OIDC_USERNAME_KEY  = env("OIDC_USERNAME_KEY", default="sub")
 # LDAP
 LDAP_SYNC=env.bool("LDAP_SYNC", default=False)
 LDAP_HOST=env("LDAP_HOST", default="openldap")
@@ -446,16 +448,29 @@ LDAP_DEFAULT_GROUPS_FILENAME=env("LDAP_DEFAULT_GROUPS_FILENAME", default="/depar
 LDAP_LOG=env.bool("LDAP_LOG", default=False)
 LDAP_USER_HOME_DIRECTORY=env("LDAP_USER_HOME_DIRECTORY", default="/home")
 
+#AD
+LDAP_IS_AD=env.bool("LDAP_IS_AD", default=False)
+AD_DOMAIN_DNS_NAME=env("AD_DOMAIN_DNS_NAME", default="example.org")
+AD_HOST_NAME=env("AD_HOST_NAME", default="ad.example.org")
+AD_PRINCIPAL_SUFFIX=env("AD_PRINCIPAL_SUFFIX", default=None)
+AD_CERT_FILE=env("AD_CERT_FILE", default='/etc/ssl/certs/ca-certificates.crt')
+AD_BIND_USER=env("AD_BIND_USER", default="admin@example.org")
+AD_BIND_PASSWORD=env("AD_BIND_PASSWORD", default="admin")
+AD_USER_BASE_RDN=env("AD_USER_BASE_RDN", default="ou=User")
+
+
+
 # USER_CREDENTIALS
 USER_CREDENTIALS_SEND_IMMEADIATELY= env.bool("USER_CREDENTIALS_SEND_IMMEADIATELY", default=False)
 
-if env.str("WELCOME_URL", "") == "":
-    WELCOME_URL = BASE_URL
-else:
-    WELCOME_URL = env("WELCOME_URL")
+
+# Welcome page
+WELCOME_URL = env.str("WELCOME_URL",default=BASE_URL)
 
 PREBOARDING_URL = None
 if env.str("PREBOARDING_URL","")=="":    
     PREBOARDING_URL = None
 else:
     PREBOARDING_URL = env("PREBOARDING_URL")
+
+EMAIL_TO_NEW_ADMIN = env.bool("EMAIL_TO_NEW_ADMIN", default=True)
